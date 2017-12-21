@@ -7,18 +7,10 @@
 
 <div id="gameDiv" style="display:none;">
 	<div id="game" style="position:absolute;width:500px;height:500px">
-		<canvas id="ctx" width="500" height="500" style="position:absolute;border:1px solid #000000;"></canvas>
+		<canvas id="ctx" width="500" height="500" style="position:absolute;border:0px solid #000000;"></canvas>
 		<canvas id="ctx-ui" width="500" height="500" style="position:absolute;border:1px solid #000000;"></canvas>
-		
-		<div id="ui" style="position:absolute;width:500px;height:500px;">
-			<button onclick="changeMap()" style="position:absolute;bottom:0px;left:0px">
-				Change Map
-			</button>
-		
-		</div>
-		
 	</div>
-	
+	<!--
 	<div id="belowGame" style="margin-top:520px">	
 		<div id="chat-text" style="width:500px;height:100px;overflow-y:scroll">
 			<div>Hello!</div>
@@ -27,25 +19,21 @@
 		<form id="chat-form">
 			<input id="chat-input" type="text" style="width:500px"></input>
 		</form>
-	</div>
+	</div>-->
 </div>
 
-<!--<script src="https://cdn.socket.io/socket.io-1.4.5.js"></script>-->
 <script src="/client/socket.js"></script>
 <script src="/client/Inventory.js"></script>
 <script>
-	// 
-	/*var WIDTH_CTX = document.getElementById('ctx').offsetWidth;
-	var HEIGHT_CTX = document.getElementById('ctx').offsetHeight;*/
 
-	var WIDTH_CTX = 500;
-	var HEIGHT_CTX = 500;
+	var WIDTH_CTX = window.innerWidth;
+	var HEIGHT_CTX = window.innerHeight;
 
-	var WIDTH_MAP = 640;
-	var HEIGHT_MAP = 640;
+	var WIDTH_MAP = 5120;
+	var HEIGHT_MAP = 2560;
 	var socket = io();
 	
-	//sign
+	//signs
 	var signDiv = document.getElementById('signDiv');
 	var signDivUsername = document.getElementById('signDiv-username');
 	var signDivSignIn = document.getElementById('signDiv-signIn');
@@ -83,9 +71,8 @@
 	socket.on('evalAnswer',function(data){
 		console.log(data);
 	});
-	
-	
-	chatForm.onsubmit = function(e){
+
+	/*chatForm.onsubmit = function(e){
 		e.preventDefault();
 		if(chatInput.value[0] === '/')
 			socket.emit('evalServer',chatInput.value.slice(1));
@@ -98,12 +85,7 @@
 		} else
 			socket.emit('sendMsgToServer',chatInput.value);
 		chatInput.value = '';		
-	}
-	
-	//UI
-	var changeMap = function(){
-		socket.emit('changeMap');
-	}
+	}*/
 	
 	var inventory = new Inventory(socket,false);
 	socket.on('updateInventory',function(items){
@@ -122,11 +104,20 @@
 	Img.map = new Image();
 	Img.map.src = '/client/img/map.png';
 
-	
+	Img.bg = new Image();
+	Img.bg.src = '/client/img/bg.png';
+
+
+	// FULLSCREEN
+	document.getElementById('ctx').width = window.innerWidth;
+	document.getElementById('ctx').height = window.innerHeight;
+	document.getElementById('ctx-ui').width = window.innerWidth;
+	document.getElementById('ctx-ui').height = window.innerHeight;
+
 	var ctx = document.getElementById("ctx").getContext("2d");
 	var ctxUi = document.getElementById("ctx-ui").getContext("2d");
 	ctxUi.font = '30px Arial';
-	
+
 	var Player = function(initPack){
 		var self = {};
 		self.id = initPack.id;
@@ -139,16 +130,9 @@
 		self.map = initPack.map;
 		
 		self.draw = function(){
-//            var x = self.x - Player.list[selfId].x + WIDTH_MAP/2;
-//            var y = self.y - Player.list[selfId].y + HEIGHT_MAP/2;
-		    var x = WIDTH_CTX/2;
-            var y = HEIGHT_CTX/2;
+            var x = self.x - Player.list[selfId].x + WIDTH_CTX/2;
+            var y = self.y - Player.list[selfId].y + HEIGHT_CTX/2;
 
-		    if(Player.list[selfId].x < WIDTH_CTX/2) x = Player.list[selfId].x;
-		    if( (WIDTH_MAP - Player.list[selfId].x) < WIDTH_CTX/2 ) x = WIDTH_CTX - (WIDTH_MAP - Player.list[selfId].x);
-
-            if(Player.list[selfId].y < HEIGHT_CTX/2) y = Player.list[selfId].y;
-            if( (HEIGHT_MAP - Player.list[selfId].y) < HEIGHT_CTX/2) y = HEIGHT_CTX - (HEIGHT_MAP - Player.list[selfId].y);
 			var hpWidth = 30 * self.hp / self.hpMax;
 			ctx.fillStyle = 'red';
 			ctx.fillRect(x - hpWidth/2,y - 40,hpWidth,4);
@@ -156,16 +140,18 @@
 			var width = Img.player.width*2;
 			var height = Img.player.height*2;
 			
-			
-			ctx.drawImage(Img.player,
-				0,0,Img.player.width,Img.player.height,
-				x-width/2,y-height/2,width,height);
-			
-			//ctx.fillText(self.score,self.x,self.y-60);
+			ctx.drawImage(
+					Img.player,
+					0,0,
+					Img.player.width,
+					Img.player.height,
+					x-width/2,
+					y-height/2,
+					width,height
+			);
 		}
-		
-		Player.list[self.id] = self;
 
+		Player.list[self.id] = self;
 
 		return self;
 	}
@@ -180,13 +166,12 @@
 		self.map = initPack.map;
 		
 		self.draw = function(){
-			var width = Img.bullet.width/2;
-			var height = Img.bullet.height/2;
+			var width = 64;
+			var height = 64;
 
-			var x = self.x - Player.list[selfId].x + WIDTH_MAP/2;
-			var y = self.y - Player.list[selfId].y + HEIGHT_MAP/2;
+			var x = self.x - Player.list[selfId].x + WIDTH_CTX/2;
+			var y = self.y - Player.list[selfId].y + HEIGHT_CTX/2;
 
-			console.log(x);
 			ctx.drawImage(Img.bullet,
 				0,0,Img.bullet.width,Img.bullet.height,
 				x-width/2,y-height/2,width,height);
@@ -254,7 +239,7 @@
 	setInterval(function(){
 		if(!selfId)
 			return;
-		ctx.clearRect(0,0,500,500);
+		ctx.clearRect(0,0,WIDTH_CTX,HEIGHT_CTX);
 		drawMap();
 		drawScore();
 		for(var i in Player.list)
@@ -268,13 +253,8 @@
 		var x = WIDTH_CTX/2 - player.x;
         var y = HEIGHT_CTX/2 - player.y;
 
-        if(player.x < WIDTH_CTX/2) x = 0;
-        if( (WIDTH_MAP - player.x) < WIDTH_CTX/2 ) x = WIDTH_CTX - WIDTH_MAP;
-
-        if(player.y < HEIGHT_CTX/2) y = 0;
-        if( (HEIGHT_MAP - player.y) < HEIGHT_CTX/2 ) y = HEIGHT_CTX - HEIGHT_MAP;
-
-        ctx.drawImage(Img.map,x,y);
+		ctx.drawImage(Img.bg,0,0,Img.bg.width, Img.bg.height, -10, -10, Img.bg.width*20, Img.bg.height*20);
+		ctx.drawImage(Img.map,0,0,Img.map.width, Img.map.height, x,y, Img.map.width*8, Img.map.height*4);
 	}
 
 	var drawScore = function(){
@@ -282,7 +262,7 @@
 			return;
 		lastScore = Player.list[selfId].score;
 		ctxUi.clearRect(0,0,500,500);
-		ctxUi.fillStyle = 'white';
+		ctxUi.fillStyle = 'black';
 		ctxUi.fillText(Player.list[selfId].score,0,30);
 	}
 	var lastScore = null;
@@ -315,10 +295,11 @@
 	document.onmouseup = function(event){
 		socket.emit('keyPress',{inputId:'attack',state:false});
 	}
-	document.onmousemove = function(event){
-		var x = -250 + event.clientX - 8;
-		var y = -250 + event.clientY - 8;
-		var angle = Math.atan2(y,x) / Math.PI * 180;
+	document.onmousemove = function(mouse){
+		var mouseX = -(WIDTH_CTX/2) + mouse.clientX - 8;
+		var mouseY = -(HEIGHT_CTX/2) + mouse.clientY - 8;
+
+		var angle = Math.atan2(mouseY,mouseX) / Math.PI * 180;
 		socket.emit('keyPress',{inputId:'mouseAngle',state:angle});
 	}
 	

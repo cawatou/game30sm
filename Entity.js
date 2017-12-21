@@ -1,7 +1,7 @@
 var initPack = {player:[],bullet:[]};
 var removePack = {player:[],bullet:[]};
-
-
+var WIDTH_MAP = 5120;
+var HEIGHT_MAP = 2560;
 Entity = function(param){
 	var self = {
 		x:320,
@@ -9,7 +9,6 @@ Entity = function(param){
 		spdX:0,
 		spdY:0,
 		id:"",
-		map:'forest',
 	}
 	if(param){
 		if(param.x)
@@ -29,24 +28,15 @@ Entity = function(param){
 		self.x += self.spdX;
 		self.y += self.spdY;
 
-		if(self.x > 640) {
+		if(self.x > WIDTH_MAP - 13 || self.x < 13) {
 			if(self.angle) self.toRemove = true;
 			self.x -= self.spdX;
-        }
-		if(self.x < 0) {
-            if(self.angle) self.toRemove = true;
-			self.x -= self.spdX;
-        }
+        }	
 
-		if(self.y > 640) {
+		if(self.y > HEIGHT_MAP - 38 || self.y < 38) {
             if(self.angle) self.toRemove = true;
 			self.y -= self.spdY;
         }
-		if(self.y < 0) {
-            if(self.angle) self.toRemove = true;
-			self.y -= self.spdY;
-        }
-
 	}
 	self.getDistance = function(pt){
 		return Math.sqrt(Math.pow(self.x-pt.x,2) + Math.pow(self.y-pt.y,2));
@@ -85,6 +75,8 @@ Player = function(param){
 	self.pressingUp = false;
 	self.pressingDown = false;
 	self.pressingAttack = false;
+	self.attackCounter = 0;
+	self.atkSpd = 5;
 	self.mouseAngle = 0;
 	self.maxSpd = 10;
 	self.hp = 10;
@@ -97,9 +89,13 @@ Player = function(param){
 		self.updateSpd();
 		
 		super_update();
+		self.attackCounter += self.atkSpd;
 		
 		if(self.pressingAttack){
-			self.shootBullet(self.mouseAngle);
+			if(self.attackCounter > 25) {
+				self.attackCounter = 0;
+				self.shootBullet(self.mouseAngle);
+			}
 		}
 	}
 	self.shootBullet = function(angle){
@@ -161,13 +157,9 @@ Player = function(param){
 
 Player.list = {};
 Player.onConnect = function(socket,username){
-	var map = 'forest';
-	if(Math.random() < 0.5)
-		map = 'field';
 	var player = Player({
 		username:username,
 		id:socket.id,
-		map:map,
 		socket:socket,
 	});
 	socket.on('keyPress',function(data){
@@ -242,15 +234,15 @@ Bullet = function(param){
 	var self = Entity(param);
 	self.id = Math.random();
 	self.angle = param.angle;
-	self.spdX = Math.cos(param.angle/180*Math.PI) * 10;
-	self.spdY = Math.sin(param.angle/180*Math.PI) * 10;
+	self.spdX = Math.cos(param.angle/180*Math.PI) * 20;
+	self.spdY = Math.sin(param.angle/180*Math.PI) * 20;
 	self.parent = param.parent;
 	
 	self.timer = 0;
 	self.toRemove = false;
 	var super_update = self.update;
 	self.update = function(){
-		if(self.timer++ > 100)
+		if(self.timer++ > 50)
 			self.toRemove = true;
 		super_update();
 		
