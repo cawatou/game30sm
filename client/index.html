@@ -35,8 +35,14 @@
 <script src="/client/Inventory.js"></script>
 <script>
 	// 
-	var WIDTH = 500;
-	var HEIGHT = 500;
+	/*var WIDTH_CTX = document.getElementById('ctx').offsetWidth;
+	var HEIGHT_CTX = document.getElementById('ctx').offsetHeight;*/
+
+	var WIDTH_CTX = 500;
+	var HEIGHT_CTX = 500;
+
+	var WIDTH_MAP = 640;
+	var HEIGHT_MAP = 640;
 	var socket = io();
 	
 	//sign
@@ -109,14 +115,13 @@
 	var Img = {};
 	Img.player = new Image();
 	Img.player.src = '/client/img/player.png';
+
 	Img.bullet = new Image();
 	Img.bullet.src = '/client/img/bullet.png';
 	
-	Img.map = {};
-	Img.map['field'] = new Image();
-	Img.map['field'].src = '/client/img/map.png';
-	Img.map['forest'] = new Image();
-	Img.map['forest'].src = '/client/img/map2.png';
+	Img.map = new Image();
+	Img.map.src = '/client/img/map.png';
+
 	
 	var ctx = document.getElementById("ctx").getContext("2d");
 	var ctxUi = document.getElementById("ctx-ui").getContext("2d");
@@ -133,12 +138,17 @@
 		self.score = initPack.score;
 		self.map = initPack.map;
 		
-		self.draw = function(){	
-			if(Player.list[selfId].map !== self.map)
-				return;
-			var x = self.x - Player.list[selfId].x + WIDTH/2;
-			var y = self.y - Player.list[selfId].y + HEIGHT/2;
-			
+		self.draw = function(){
+//            var x = self.x - Player.list[selfId].x + WIDTH_MAP/2;
+//            var y = self.y - Player.list[selfId].y + HEIGHT_MAP/2;
+		    var x = WIDTH_CTX/2;
+            var y = HEIGHT_CTX/2;
+
+		    if(Player.list[selfId].x < WIDTH_CTX/2) x = Player.list[selfId].x;
+		    if( (WIDTH_MAP - Player.list[selfId].x) < WIDTH_CTX/2 ) x = WIDTH_CTX - (WIDTH_MAP - Player.list[selfId].x);
+
+            if(Player.list[selfId].y < HEIGHT_CTX/2) y = Player.list[selfId].y;
+            if( (HEIGHT_MAP - Player.list[selfId].y) < HEIGHT_CTX/2) y = HEIGHT_CTX - (HEIGHT_MAP - Player.list[selfId].y);
 			var hpWidth = 30 * self.hp / self.hpMax;
 			ctx.fillStyle = 'red';
 			ctx.fillRect(x - hpWidth/2,y - 40,hpWidth,4);
@@ -155,8 +165,8 @@
 		}
 		
 		Player.list[self.id] = self;
-		
-		
+
+
 		return self;
 	}
 	Player.list = {};
@@ -170,14 +180,13 @@
 		self.map = initPack.map;
 		
 		self.draw = function(){
-			if(Player.list[selfId].map !== self.map)
-				return;
 			var width = Img.bullet.width/2;
 			var height = Img.bullet.height/2;
-			
-			var x = self.x - Player.list[selfId].x + WIDTH/2;
-			var y = self.y - Player.list[selfId].y + HEIGHT/2;
-			
+
+			var x = self.x - Player.list[selfId].x + WIDTH_MAP/2;
+			var y = self.y - Player.list[selfId].y + HEIGHT_MAP/2;
+
+			console.log(x);
 			ctx.drawImage(Img.bullet,
 				0,0,Img.bullet.width,Img.bullet.height,
 				x-width/2,y-height/2,width,height);
@@ -256,11 +265,18 @@
 	
 	var drawMap = function(){
 		var player = Player.list[selfId];
-		var x = WIDTH/2 - player.x;
-		var y = HEIGHT/2 - player.y;
-		ctx.drawImage(Img.map[player.map],x,y);
+		var x = WIDTH_CTX/2 - player.x;
+        var y = HEIGHT_CTX/2 - player.y;
+
+        if(player.x < WIDTH_CTX/2) x = 0;
+        if( (WIDTH_MAP - player.x) < WIDTH_CTX/2 ) x = WIDTH_CTX - WIDTH_MAP;
+
+        if(player.y < HEIGHT_CTX/2) y = 0;
+        if( (HEIGHT_MAP - player.y) < HEIGHT_CTX/2 ) y = HEIGHT_CTX - HEIGHT_MAP;
+
+        ctx.drawImage(Img.map,x,y);
 	}
-	
+
 	var drawScore = function(){
 		if(lastScore === Player.list[selfId].score)
 			return;
@@ -309,9 +325,7 @@
 	document.oncontextmenu = function(event){
 		event.preventDefault();
 	}
-	
-	
-	
+
 </script>
 
 

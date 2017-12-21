@@ -1,13 +1,11 @@
-
 var initPack = {player:[],bullet:[]};
 var removePack = {player:[],bullet:[]};
 
 
-
 Entity = function(param){
 	var self = {
-		x:250,
-		y:250,
+		x:320,
+		y:320,
 		spdX:0,
 		spdY:0,
 		id:"",
@@ -30,12 +28,32 @@ Entity = function(param){
 	self.updatePosition = function(){
 		self.x += self.spdX;
 		self.y += self.spdY;
+
+		if(self.x > 640) {
+			if(self.angle) self.toRemove = true;
+			self.x -= self.spdX;
+        }
+		if(self.x < 0) {
+            if(self.angle) self.toRemove = true;
+			self.x -= self.spdX;
+        }
+
+		if(self.y > 640) {
+            if(self.angle) self.toRemove = true;
+			self.y -= self.spdY;
+        }
+		if(self.y < 0) {
+            if(self.angle) self.toRemove = true;
+			self.y -= self.spdY;
+        }
+
 	}
 	self.getDistance = function(pt){
 		return Math.sqrt(Math.pow(self.x-pt.x,2) + Math.pow(self.y-pt.y,2));
 	}
 	return self;
 }
+
 Entity.getFrameUpdateData = function(){
 	var pack = {
 		initPack:{
@@ -57,7 +75,6 @@ Entity.getFrameUpdateData = function(){
 	removePack.bullet = [];
 	return pack;
 }
-
 
 Player = function(param){
 	var self = Entity(param);
@@ -141,6 +158,7 @@ Player = function(param){
 	initPack.player.push(self.getInitPack());
 	return self;
 }
+
 Player.list = {};
 Player.onConnect = function(socket,username){
 	var map = 'forest';
