@@ -128,6 +128,7 @@
 		self.hpMax = initPack.hpMax;
 		self.score = initPack.score;
 		self.map = initPack.map;
+
 		
 		self.draw = function(){
             var x = self.x - Player.list[selfId].x + WIDTH_CTX/2;
@@ -137,18 +138,30 @@
 			ctx.fillStyle = 'red';
 			ctx.fillRect(x - hpWidth/2,y - 40,hpWidth,4);
 			
-			var width = Img.player.width*2;
-			var height = Img.player.height*2;
-			
+			var width = 50;
+			var height = 50;
+
+            //var directionMod = 1; // 3	//draw right
+
+
+			if(Player.list[selfId].mouseAngle >= -45 && Player.list[selfId].mouseAngle < 45) // right
+                directionMod = 1;
+            if(Player.list[selfId].mouseAngle >= 45 && Player.list[selfId].mouseAngle < 135) //down
+                directionMod = 0; //0
+            else if(Player.list[selfId].mouseAngle >= 135 && Player.list[selfId].mouseAngle > - 135) //left
+                directionMod = 2;
+            else if(Player.list[selfId].mouseAngle >= -135 && Player.list[selfId].mouseAngle < -45)	//up
+                directionMod = 3;
+
+            console.log(Player.list[selfId].mouseAngle);
+
 			ctx.drawImage(
-					Img.player,
-					0,0,
-					Img.player.width,
-					Img.player.height,
-					x-width/2,
-					y-height/2,
+			    	Img.player,
+					0, Img.player.width * directionMod,
+					Img.player.width, Img.player.height/4,
+					x-width/2, y-height/2,
 					width,height
-			);
+				);
 		}
 
 		Player.list[self.id] = self;
@@ -296,10 +309,14 @@
 		socket.emit('keyPress',{inputId:'attack',state:false});
 	}
 	document.onmousemove = function(mouse){
-		var mouseX = -(WIDTH_CTX/2) + mouse.clientX - 8;
-		var mouseY = -(HEIGHT_CTX/2) + mouse.clientY - 8;
+        var mouseX = mouse.clientX - document.getElementById("ctx").getBoundingClientRect().left;
+        var mouseY = mouse.clientY - document.getElementById("ctx").getBoundingClientRect().top;
 
-		var angle = Math.atan2(mouseY,mouseX) / Math.PI * 180;
+        mouseX -= WIDTH_CTX/2;
+        mouseY -= HEIGHT_CTX/2;
+
+        var angle = Math.atan2(mouseY,mouseX) / Math.PI * 180;
+		if(Player.list[selfId]) Player.list[selfId].mouseAngle = angle;
 		socket.emit('keyPress',{inputId:'mouseAngle',state:angle});
 	}
 	

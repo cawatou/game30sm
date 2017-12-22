@@ -135,8 +135,7 @@ Player = function(param){
 			hp:self.hp,
 			hpMax:self.hpMax,
 			score:self.score,
-			map:self.map,
-		};		
+		};
 	}
 	self.getUpdatePack = function(){
 		return {
@@ -163,8 +162,10 @@ Player.onConnect = function(socket,username){
 		socket:socket,
 	});
 	socket.on('keyPress',function(data){
-		if(data.inputId === 'left')
-			player.pressingLeft = data.state;
+		if(data.inputId === 'left'){
+            player.pressingLeft = data.state;
+		}
+
 		else if(data.inputId === 'right')
 			player.pressingRight = data.state;
 		else if(data.inputId === 'up')
