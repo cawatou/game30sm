@@ -82,7 +82,7 @@ Player = function(param){
 	self.hp = 10;
 	self.hpMax = 10;
 	self.score = 0;
-	self.inventory = new Inventory(param.socket,true);
+	//self.inventory = new Inventory(param.socket,true);
 	
 	var super_update = self.update;
 	self.update = function(){
@@ -99,14 +99,13 @@ Player = function(param){
 		}
 	}
 	self.shootBullet = function(angle){
-		if(Math.random() < 0.1)
-			self.inventory.addItem("potion",1);
+		// if(Math.random() < 0.1)
+		// 	self.inventory.addItem("potion",1);
 		Bullet({
 			parent:self.id,
 			angle:angle,
 			x:self.x,
 			y:self.y,
-			map:self.map,
 		});
 	}
 	
@@ -144,7 +143,11 @@ Player = function(param){
 			y:self.y,
 			hp:self.hp,
 			score:self.score,
-			map:self.map,
+			mouseAngle:self.mouseAngle,
+            pressingRight:self.pressingRight,
+            pressingLeft:self.pressingLeft,
+            pressingUp:self.pressingUp,
+            pressingDown:self.pressingDown,
 		}	
 	}
 	
@@ -162,19 +165,17 @@ Player.onConnect = function(socket,username){
 		socket:socket,
 	});
 	socket.on('keyPress',function(data){
-		if(data.inputId === 'left'){
+		if(data.inputId === 'left')
             player.pressingLeft = data.state;
-		}
-
-		else if(data.inputId === 'right')
+		if(data.inputId === 'right')
 			player.pressingRight = data.state;
-		else if(data.inputId === 'up')
+		if(data.inputId === 'up')
 			player.pressingUp = data.state;
-		else if(data.inputId === 'down')
+		if(data.inputId === 'down')
 			player.pressingDown = data.state;
-		else if(data.inputId === 'attack')
+		if(data.inputId === 'attack')
 			player.pressingAttack = data.state;
-		else if(data.inputId === 'mouseAngle')
+		if(data.inputId === 'mouseAngle')
 			player.mouseAngle = data.state;
 	});
 	
@@ -305,4 +306,49 @@ Bullet.getAllInitPack = function(){
 	for(var i in Bullet.list)
 		bullets.push(Bullet.list[i].getInitPack());
 	return bullets;
+}
+
+
+Upgrade = function (id,x,y,width,height,category,img){
+    var self = Entity('upgrade',id,x,y,width,height,img);
+
+    self.category = category;
+    Upgrade.list[id] = self;
+}
+
+Upgrade.list = {};
+
+Upgrade.update = function(){
+    if(frameCount % 75 === 0)	//every 3 sec
+        Upgrade.randomlyGenerate();
+    for(var key in Upgrade.list){
+        Upgrade.list[key].update();
+        var isColliding = player.testCollision(Upgrade.list[key]);
+        if(isColliding){
+            if(Upgrade.list[key].category === 'score')
+                score += 1000;
+            if(Upgrade.list[key].category === 'atkSpd')
+                player.atkSpd += 3;
+            delete Upgrade.list[key];
+        }
+    }
+}
+
+Upgrade.randomlyGenerate = function(){
+    //Math.random() returns a number between 0 and 1
+    var x = Math.random()*Maps.current.width;
+    var y = Math.random()*Maps.current.height;
+    var height = 32;
+    var width = 32;
+    var id = Math.random();
+
+    if(Math.random()<0.5){
+        var category = 'score';
+        var img = Img.upgrade1;
+    } else {
+        var category = 'atkSpd';
+        var img = Img.upgrade2;
+    }
+
+    Upgrade(id,x,y,width,height,category,img);
 }

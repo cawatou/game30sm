@@ -25,12 +25,21 @@
 <script src="/client/socket.js"></script>
 <script src="/client/Inventory.js"></script>
 <script>
+	var map = [];
+    for(var i=0; i< 160; i++){
+        map[i] = [];
+        for(var j=0; j < 320; j++){
+            map[i][j] = 0;
+		}
+	}
+	console.log(map);
+
 
 	var WIDTH_CTX = window.innerWidth;
 	var HEIGHT_CTX = window.innerHeight;
 
-	var WIDTH_MAP = 5120;
-	var HEIGHT_MAP = 2560;
+	//var WIDTH_MAP = 5120; // 320 * 16px
+	//var HEIGHT_MAP = 2560; // 160 * 16px
 	var socket = io();
 	
 	//signs
@@ -60,11 +69,12 @@
 			alert("Sign up unsuccessul.");
 	});
 
+	/*
 	//chat
 	var chatText = document.getElementById('chat-text');
 	var chatInput = document.getElementById('chat-input');
 	var chatForm = document.getElementById('chat-form');
-	
+
 	socket.on('addToChat',function(data){
 		chatText.innerHTML += '<div>' + data + '</div>';
 	});
@@ -72,7 +82,7 @@
 		console.log(data);
 	});
 
-	/*chatForm.onsubmit = function(e){
+	chatForm.onsubmit = function(e){
 		e.preventDefault();
 		if(chatInput.value[0] === '/')
 			socket.emit('evalServer',chatInput.value.slice(1));
@@ -84,19 +94,22 @@
 			});
 		} else
 			socket.emit('sendMsgToServer',chatInput.value);
-		chatInput.value = '';		
-	}*/
-	
+		chatInput.value = '';
+	}
+
 	var inventory = new Inventory(socket,false);
 	socket.on('updateInventory',function(items){
 		inventory.items = items;
 		inventory.refreshRender();
-	});
+	});*/
 
 	//game
 	var Img = {};
-	Img.player = new Image();
-	Img.player.src = '/client/img/player.png';
+    Img.body = new Image();
+    Img.body.src = '/client/img/body.png';
+
+    Img.head = new Image();
+    Img.head.src = '/client/img/head.png';
 
 	Img.bullet = new Image();
 	Img.bullet.src = '/client/img/bullet.png';
@@ -106,6 +119,12 @@
 
 	Img.bg = new Image();
 	Img.bg.src = '/client/img/bg.png';
+
+    Img.heal = new Image();
+    Img.heal.src = '/client/img/heal.png';
+
+    Img.box = new Image();
+    Img.box.src = '/client/img/box.png';
 
 
 	// FULLSCREEN
@@ -119,6 +138,7 @@
 	ctxUi.font = '30px Arial';
 
 	var Player = function(initPack){
+
 		var self = {};
 		self.id = initPack.id;
 		self.number = initPack.number;
@@ -127,8 +147,6 @@
 		self.hp = initPack.hp;
 		self.hpMax = initPack.hpMax;
 		self.score = initPack.score;
-		self.map = initPack.map;
-
 		
 		self.draw = function(){
             var x = self.x - Player.list[selfId].x + WIDTH_CTX/2;
@@ -141,27 +159,40 @@
 			var width = 50;
 			var height = 50;
 
-            //var directionMod = 1; // 3	//draw right
+            var directionHead = 0;
+			if(self.mouseAngle >= -45 && self.mouseAngle < 45) // right
+                directionHead = 1;
+            if(self.mouseAngle >= 45 && self.mouseAngle < 135) //down
+                directionHead = 3;
+            if(self.mouseAngle >= 135 || (self.mouseAngle >= -180 && self.mouseAngle < - 135)) //left
+                directionHead = 2;
+            if(self.mouseAngle >= -135 && self.mouseAngle < -45)	//up
+                directionHead = 0;
+
+            if(!directionBody) var directionBody = 0;
+            if(self.pressingRight) // right
+                directionBody = 1;
+            if(self.pressingDown) //down
+                directionBody = 3;
+            if(self.pressingLeft) //left
+                directionBody = 2;
+            if(self.pressingUp)	//up
+                directionBody = 0;
 
 
-			if(Player.list[selfId].mouseAngle >= -45 && Player.list[selfId].mouseAngle < 45) // right
-                directionMod = 1;
-            if(Player.list[selfId].mouseAngle >= 45 && Player.list[selfId].mouseAngle < 135) //down
-                directionMod = 0; //0
-            else if(Player.list[selfId].mouseAngle >= 135 && Player.list[selfId].mouseAngle > - 135) //left
-                directionMod = 2;
-            else if(Player.list[selfId].mouseAngle >= -135 && Player.list[selfId].mouseAngle < -45)	//up
-                directionMod = 3;
-
-            console.log(Player.list[selfId].mouseAngle);
-
-			ctx.drawImage(
-			    	Img.player,
-					0, Img.player.width * directionMod,
-					Img.player.width, Img.player.height/4,
+			ctx.drawImage(Img.body,
+					0, Img.body.width * directionBody,
+					Img.body.width, Img.body.height/4,
 					x-width/2, y-height/2,
 					width,height
 				);
+
+            ctx.drawImage(Img.head,
+                0, Img.head.width * directionHead,
+                Img.head.width, Img.head.height/4,
+                x-width/2, y-height/2,
+                width,height
+            );
 		}
 
 		Player.list[self.id] = self;
@@ -223,8 +254,16 @@
 					p.hp = pack.hp;
 				if(pack.score !== undefined)
 					p.score = pack.score;
-				if(pack.map !== undefined)
-					p.map = pack.map;
+				if(pack.mouseAngle !== undefined)
+					p.mouseAngle = pack.mouseAngle;
+                if(pack.pressingRight !== undefined)
+                    p.pressingRight = pack.pressingRight;
+                if(pack.pressingLeft !== undefined)
+                    p.pressingLeft = pack.pressingLeft;
+                if(pack.pressingUp !== undefined)
+                    p.pressingUp = pack.pressingUp;
+                if(pack.pressingDown !== undefined)
+                    p.pressingDown = pack.pressingDown;
 			}
 		}
 		for(var i = 0 ; i < data.bullet.length; i++){
@@ -268,6 +307,7 @@
 
 		ctx.drawImage(Img.bg,0,0,Img.bg.width, Img.bg.height, -10, -10, Img.bg.width*20, Img.bg.height*20);
 		ctx.drawImage(Img.map,0,0,Img.map.width, Img.map.height, x,y, Img.map.width*8, Img.map.height*4);
+        ctx.drawImage(Img.box,0,0,Img.box.width, Img.box.height, x + 100, y + 100, Img.box.width, Img.box.height);
 	}
 
 	var drawScore = function(){
@@ -316,7 +356,7 @@
         mouseY -= HEIGHT_CTX/2;
 
         var angle = Math.atan2(mouseY,mouseX) / Math.PI * 180;
-		if(Player.list[selfId]) Player.list[selfId].mouseAngle = angle;
+
 		socket.emit('keyPress',{inputId:'mouseAngle',state:angle});
 	}
 	
