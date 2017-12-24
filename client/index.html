@@ -126,6 +126,8 @@
     Img.box = new Image();
     Img.box.src = '/client/img/box.png';
 
+    Img.track = new Image();
+    Img.track.src = '/client/img/track.png';
 
 	// FULLSCREEN
 	document.getElementById('ctx').width = window.innerWidth;
@@ -147,7 +149,8 @@
 		self.hp = initPack.hp;
 		self.hpMax = initPack.hpMax;
 		self.score = initPack.score;
-		
+		self.directionBody = 0;
+
 		self.draw = function(){
             var x = self.x - Player.list[selfId].x + WIDTH_CTX/2;
             var y = self.y - Player.list[selfId].y + HEIGHT_CTX/2;
@@ -156,43 +159,55 @@
 			ctx.fillStyle = 'red';
 			ctx.fillRect(x - hpWidth/2,y - 40,hpWidth,4);
 			
-			var width = 50;
-			var height = 50;
+			var width = 60;
+			var height = 60;
 
             var directionHead = 0;
 			if(self.mouseAngle >= -45 && self.mouseAngle < 45) // right
-                directionHead = 1;
+                directionHead = 2;
             if(self.mouseAngle >= 45 && self.mouseAngle < 135) //down
                 directionHead = 3;
             if(self.mouseAngle >= 135 || (self.mouseAngle >= -180 && self.mouseAngle < - 135)) //left
-                directionHead = 2;
+                directionHead = 1;
             if(self.mouseAngle >= -135 && self.mouseAngle < -45)	//up
                 directionHead = 0;
 
-            if(!directionBody) var directionBody = 0;
+
             if(self.pressingRight) // right
-                directionBody = 1;
+                self.directionBody = 2;
             if(self.pressingDown) //down
-                directionBody = 3;
+                self.directionBody = 3;
             if(self.pressingLeft) //left
-                directionBody = 2;
+                self.directionBody = 1;
             if(self.pressingUp)	//up
-                directionBody = 0;
+                self.directionBody = 0;
+            if(self.pressingUp && self.pressingRight)	//up + right
+                self.directionBody = 7;
+            if(self.pressingUp && self.pressingLeft)	//up + left
+                self.directionBody = 5;
+            if(self.pressingDown && self.pressingRight)	//down + right
+                self.directionBody = 6;
+            if(self.pressingDown && self.pressingLeft)	//down + left
+                self.directionBody = 4;
+
 
 
 			ctx.drawImage(Img.body,
-					0, Img.body.width * directionBody,
-					Img.body.width, Img.body.height/4,
-					x-width/2, y-height/2,
-					width,height
-				);
+				0, Img.body.height/8 * self.directionBody,
+				Img.body.width, Img.body.height/8,
+				x-width/2, y-height/2, width,height
+			);
 
             ctx.drawImage(Img.head,
-                0, Img.head.width * directionHead,
-                Img.head.width, Img.head.height/4,
-                x-width/2, y-height/2,
-                width,height
+                0, Img.head.height/8 * directionHead,
+                Img.head.width, Img.head.height/8,
+                x-width/2, y-height/2, width,height
             );
+            /*ctx.drawImage(Img.track,
+                0, 0,
+                Img.track.width, Img.track.height,
+                x-width/2, y-height/2, width,height
+            );*/
 		}
 
 		Player.list[self.id] = self;
@@ -207,7 +222,6 @@
 		self.id = initPack.id;
 		self.x = initPack.x;
 		self.y = initPack.y;
-		self.map = initPack.map;
 		
 		self.draw = function(){
 			var width = 64;
@@ -225,6 +239,30 @@
 		return self;
 	}
 	Bullet.list = {};
+
+    var Track = function(initPack){
+        var self = {};
+        self.id = initPack.id;
+        self.x = initPack.x;
+        self.y = initPack.y;
+        self.directionTrack = initPack.directionTrack;
+        self.draw = function(){
+            var width = 60;
+            var height = 60;
+
+            var x = self.x - Player.list[selfId].x + WIDTH_CTX/2;
+            var y = self.y - Player.list[selfId].y + HEIGHT_CTX/2;
+
+            ctx.drawImage(Img.track,
+                0,Img.track.height/4 * self.directionTrack,
+				Img.track.width,Img.track.height/4,
+                x-width/2,y-height/2,width,height);
+        }
+
+        Track.list[self.id] = self;
+        return self;
+    }
+    Track.list = {};
 	
 	var selfId = null;
 
@@ -238,6 +276,12 @@
 		for(var i = 0 ; i < data.bullet.length; i++){
 			new Bullet(data.bullet[i]);
 		}
+
+		for(var i = 0 ; i < data.track.length; i++){
+			new Track(data.track[i]);
+		}
+
+		if(data.track.length > 0) console.log(data.track);
 	});
 	
 	socket.on('update',function(data){
@@ -276,6 +320,7 @@
 					b.y = pack.y;
 			}
 		}
+
 	});
 	
 	socket.on('remove',function(data){
@@ -286,6 +331,9 @@
 		for(var i = 0 ; i < data.bullet.length; i++){
 			delete Bullet.list[data.bullet[i]];
 		}
+        for(var i = 0 ; i < data.track.length; i++){
+            delete Track.list[data.track[i]];
+        }
 	});
 	
 	setInterval(function(){
@@ -298,6 +346,8 @@
 			Player.list[i].draw();
 		for(var i in Bullet.list)
 			Bullet.list[i].draw();
+		for(var i in Track.list)
+            Track.list[i].draw();
 	},40);
 	
 	var drawMap = function(){

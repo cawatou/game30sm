@@ -1,5 +1,5 @@
-var initPack = {player:[],bullet:[]};
-var removePack = {player:[],bullet:[]};
+var initPack = {player:[],bullet:[],track:[]};
+var removePack = {player:[],bullet:[],track:[]};
 var WIDTH_MAP = 5120;
 var HEIGHT_MAP = 2560;
 Entity = function(param){
@@ -49,20 +49,25 @@ Entity.getFrameUpdateData = function(){
 		initPack:{
 			player:initPack.player,
 			bullet:initPack.bullet,
+			track:initPack.track
 		},
 		removePack:{
 			player:removePack.player,
 			bullet:removePack.bullet,
+            track:removePack.track
 		},
 		updatePack:{
 			player:Player.update(),
 			bullet:Bullet.update(),
+            track:Track.update()
 		}
 	};
 	initPack.player = [];
 	initPack.bullet = [];
+    initPack.track = [];
 	removePack.player = [];
 	removePack.bullet = [];
+	removePack.track = [];
 	return pack;
 }
 
@@ -82,6 +87,7 @@ Player = function(param){
 	self.hp = 10;
 	self.hpMax = 10;
 	self.score = 0;
+    self.timer = 0;
 	//self.inventory = new Inventory(param.socket,true);
 	
 	var super_update = self.update;
@@ -110,19 +116,50 @@ Player = function(param){
 	}
 	
 	self.updateSpd = function(){
-		if(self.pressingRight)
-			self.spdX = self.maxSpd;
-		else if(self.pressingLeft)
-			self.spdX = -self.maxSpd;
+		var directionTrack;
+		if(self.pressingRight){
+            self.spdX = self.maxSpd;
+            directionTrack = 1;
+		}
+		else if(self.pressingLeft){
+            self.spdX = -self.maxSpd;
+            directionTrack = 1;
+		}
 		else
 			self.spdX = 0;
 		
-		if(self.pressingUp)
-			self.spdY = -self.maxSpd;
-		else if(self.pressingDown)
-			self.spdY = self.maxSpd;
+		if(self.pressingUp){
+            self.spdY = -self.maxSpd;
+            directionTrack = 0;
+		}
+		else if(self.pressingDown){
+            self.spdY = self.maxSpd;
+            directionTrack = 0;
+		}
 		else
-			self.spdY = 0;		
+			self.spdY = 0;
+
+
+        if(self.pressingUp && self.pressingRight)	//up + right
+            directionTrack = 2;
+        if(self.pressingUp && self.pressingLeft)	//up + left
+            directionTrack = 3;
+        if(self.pressingDown && self.pressingRight)	//down + right
+            directionTrack = 3;
+        if(self.pressingDown && self.pressingLeft)	//down + left
+            directionTrack = 2;
+
+		if(self.spdX || self.spdY ){
+			if(self.timer++ > 1){
+                self.timer = 0;
+				Track({
+					x:self.x,
+					y:self.y,
+                    directionTrack: directionTrack,
+				});
+			}
+
+		}
 	}
 	
 	self.getInitPack = function(){
@@ -179,12 +216,12 @@ Player.onConnect = function(socket,username){
 			player.mouseAngle = data.state;
 	});
 	
-	socket.on('changeMap',function(data){
+	/*socket.on('changeMap',function(data){
 		if(player.map === 'field')
 			player.map = 'forest';
 		else
 			player.map = 'field';
-	});
+	});*/
 	
 	socket.on('sendMsgToServer',function(data){
 		for(var i in SOCKET_LIST){
@@ -208,6 +245,7 @@ Player.onConnect = function(socket,username){
 		selfId:socket.id,
 		player:Player.getAllInitPack(),
 		bullet:Bullet.getAllInitPack(),
+		track:Track.getAllInitPack()
 	})
 }
 Player.getAllInitPack = function(){
@@ -250,7 +288,7 @@ Bullet = function(param){
 		
 		for(var i in Player.list){
 			var p = Player.list[i];
-			if(self.map === p.map && self.getDistance(p) < 32 && self.parent !== p.id){
+			if(self.getDistance(p) < 32 && self.parent !== p.id){
 				p.hp -= 1;
 								
 				if(p.hp <= 0){
@@ -270,7 +308,6 @@ Bullet = function(param){
 			id:self.id,
 			x:self.x,
 			y:self.y,
-			map:self.map,
 		};
 	}
 	self.getUpdatePack = function(){
@@ -307,6 +344,64 @@ Bullet.getAllInitPack = function(){
 		bullets.push(Bullet.list[i].getInitPack());
 	return bullets;
 }
+
+
+Track = function(param){
+    var self = Entity(param);
+    self.id = Math.random();
+    self.timer = 0;
+    self.directionTrack = param.directionTrack;
+    self.toRemove = false;
+    var super_update = self.update;
+    self.update = function(){
+        if(self.timer++ > 200)
+            self.toRemove = true;
+        super_update();
+    }
+    self.getInitPack = function(){
+        return {
+            id:self.id,
+            x:self.x,
+            y:self.y,
+            directionTrack:self.directionTrack,
+        };
+    }
+    self.getUpdatePack = function(){
+        return {
+            id:self.id,
+            x:self.x,
+            y:self.y,
+            directionTrack:self.directionTrack,
+        };
+    }
+
+    Track.list[self.id] = self;
+    initPack.track.push(self.getInitPack());
+    return self;
+}
+Track.list = {};
+
+Track.update = function(){
+    var pack = [];
+    for(var i in Track.list){
+        var track = Track.list[i];
+        track.update();
+        if(track.toRemove){
+            delete Track.list[i];
+            removePack.track.push(track.id);
+        } else
+            pack.push(track.getUpdatePack());
+    }
+    return pack;
+}
+
+Track.getAllInitPack = function(){
+    var tracks = [];
+    for(var i in Track.list)
+        tracks.push(Track.list[i].getInitPack());
+    return tracks;
+}
+
 
 
 Upgrade = function (id,x,y,width,height,category,img){
