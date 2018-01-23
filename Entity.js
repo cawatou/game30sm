@@ -1,11 +1,11 @@
-var initPack = {player:[],bullet:[],track:[]};
-var removePack = {player:[],bullet:[],track:[]};
+var initPack = {player:[],bullet:[],actor:[]};
+var removePack = {player:[],bullet:[],actor:[]};
 var WIDTH_MAP = 5120;
 var HEIGHT_MAP = 2560;
 Entity = function(param){
 	var self = {
-		x:320,
-		y:320,
+		x:650,
+		y:340,
 		spdX:0,
 		spdY:0,
 		id:"",
@@ -49,25 +49,25 @@ Entity.getFrameUpdateData = function(){
 		initPack:{
 			player:initPack.player,
 			bullet:initPack.bullet,
-			track:initPack.track
+            actor:initPack.actor
 		},
 		removePack:{
 			player:removePack.player,
 			bullet:removePack.bullet,
-            track:removePack.track
+            actor:removePack.actor
 		},
 		updatePack:{
 			player:Player.update(),
 			bullet:Bullet.update(),
-            track:Track.update()
+            actor:Actor.update()
 		}
 	};
 	initPack.player = [];
 	initPack.bullet = [];
-    initPack.track = [];
+    initPack.actor = [];
 	removePack.player = [];
 	removePack.bullet = [];
-	removePack.track = [];
+	removePack.actor = [];
 	return pack;
 }
 
@@ -100,11 +100,11 @@ Player = function(param){
 		if(self.pressingAttack){
 			if(self.attackCounter > 25) {
 				self.attackCounter = 0;
-				self.shootBullet(self.mouseAngle);
+				self.shootBullet(self.mouseAngle, self.pressingAttack);
 			}
 		}
 	}
-	self.shootBullet = function(angle){
+	self.shootBullet = function(angle, type){
 		// if(Math.random() < 0.1)
 		// 	self.inventory.addItem("potion",1);
 		Bullet({
@@ -112,6 +112,7 @@ Player = function(param){
 			angle:angle,
 			x:self.x,
 			y:self.y,
+			type: type,
 		});
 	}
 	
@@ -150,12 +151,13 @@ Player = function(param){
             directionTrack = 2;
 
 		if(self.spdX || self.spdY ){
-			if(self.timer++ > 1){
+			if(self.timer++ > 0.9){
                 self.timer = 0;
-				Track({
+				Actor({
 					x:self.x,
 					y:self.y,
-                    directionTrack: directionTrack,
+                    direction: directionTrack,
+					type: 'track',
 				});
 			}
 
@@ -245,7 +247,7 @@ Player.onConnect = function(socket,username){
 		selfId:socket.id,
 		player:Player.getAllInitPack(),
 		bullet:Bullet.getAllInitPack(),
-		track:Track.getAllInitPack()
+		actor:Actor.getAllInitPack()
 	})
 }
 Player.getAllInitPack = function(){
@@ -277,7 +279,7 @@ Bullet = function(param){
 	self.spdX = Math.cos(param.angle/180*Math.PI) * 20;
 	self.spdY = Math.sin(param.angle/180*Math.PI) * 20;
 	self.parent = param.parent;
-	
+	self.type = param.type;
 	self.timer = 0;
 	self.toRemove = false;
 	var super_update = self.update;
@@ -289,8 +291,15 @@ Bullet = function(param){
 		for(var i in Player.list){
 			var p = Player.list[i];
 			if(self.getDistance(p) < 32 && self.parent !== p.id){
-				p.hp -= 1;
-								
+				if(self.type == 1) p.hp -= 1;
+				else p.hp -= 5;
+
+				Actor({
+                    x:self.x,
+                    y:self.y,
+                    type: 'blow',
+                });
+
 				if(p.hp <= 0){
 					var shooter = Player.list[self.parent];
 					if(shooter)
@@ -308,6 +317,7 @@ Bullet = function(param){
 			id:self.id,
 			x:self.x,
 			y:self.y,
+			type: self.type
 		};
 	}
 	self.getUpdatePack = function(){
@@ -346,15 +356,16 @@ Bullet.getAllInitPack = function(){
 }
 
 
-Track = function(param){
+Actor = function(param){
     var self = Entity(param);
     self.id = Math.random();
     self.timer = 0;
-    self.directionTrack = param.directionTrack;
+    self.type = param.type;
+    self.direction = param.direction;
     self.toRemove = false;
     var super_update = self.update;
     self.update = function(){
-        if(self.timer++ > 200)
+        if(self.timer++ > 500)
             self.toRemove = true;
         super_update();
     }
@@ -363,7 +374,8 @@ Track = function(param){
             id:self.id,
             x:self.x,
             y:self.y,
-            directionTrack:self.directionTrack,
+            direction:self.direction,
+            type:self.type,
         };
     }
     self.getUpdatePack = function(){
@@ -371,35 +383,35 @@ Track = function(param){
             id:self.id,
             x:self.x,
             y:self.y,
-            directionTrack:self.directionTrack,
+            direction:self.direction,
         };
     }
 
-    Track.list[self.id] = self;
-    initPack.track.push(self.getInitPack());
+    Actor.list[self.id] = self;
+    initPack.actor.push(self.getInitPack());
     return self;
 }
-Track.list = {};
+Actor.list = {};
 
-Track.update = function(){
+Actor.update = function(){
     var pack = [];
-    for(var i in Track.list){
-        var track = Track.list[i];
-        track.update();
-        if(track.toRemove){
-            delete Track.list[i];
-            removePack.track.push(track.id);
+    for(var i in Actor.list){
+        var actor = Actor.list[i];
+        actor.update();
+        if(actor.toRemove){
+            delete Actor.list[i];
+            removePack.actor.push(actor.id);
         } else
-            pack.push(track.getUpdatePack());
+            pack.push(actor.getUpdatePack());
     }
     return pack;
 }
 
-Track.getAllInitPack = function(){
-    var tracks = [];
-    for(var i in Track.list)
-        tracks.push(Track.list[i].getInitPack());
-    return tracks;
+Actor.getAllInitPack = function(){
+    var actors = [];
+    for(var i in Actor.list)
+        actors.push(Actor.list[i].getInitPack());
+    return actors;
 }
 
 

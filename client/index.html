@@ -38,8 +38,8 @@
 	var WIDTH_CTX = window.innerWidth;
 	var HEIGHT_CTX = window.innerHeight;
 
-	//var WIDTH_MAP = 5120; // 320 * 16px
-	//var HEIGHT_MAP = 2560; // 160 * 16px
+	//var WIDTH_MAP = 5120; // 320 * 16px    5100
+	//var HEIGHT_MAP = 2560; // 160 * 16px   2580
 	var socket = io();
 	
 	//signs
@@ -113,6 +113,12 @@
 
 	Img.bullet = new Image();
 	Img.bullet.src = '/client/img/bullet.png';
+
+    Img.rocket = new Image();
+    Img.rocket.src = '/client/img/rocket.png';
+
+    Img.blow = new Image();
+    Img.blow.src = '/client/img/blow.png';
 	
 	Img.map = new Image();
 	Img.map.src = '/client/img/map.png';
@@ -155,6 +161,7 @@
             var x = self.x - Player.list[selfId].x + WIDTH_CTX/2;
             var y = self.y - Player.list[selfId].y + HEIGHT_CTX/2;
 
+            console.log(Player.list[selfId].x, Player.list[selfId].y);
 			var hpWidth = 30 * self.hp / self.hpMax;
 			ctx.fillStyle = 'red';
 			ctx.fillRect(x - hpWidth/2,y - 40,hpWidth,4);
@@ -163,14 +170,23 @@
 			var height = 60;
 
             var directionHead = 0;
-			if(self.mouseAngle >= -45 && self.mouseAngle < 45) // right
+			if(self.mouseAngle >= -22.5 && self.mouseAngle < 22.5) // right
                 directionHead = 2;
-            if(self.mouseAngle >= 45 && self.mouseAngle < 135) //down
+			if(self.mouseAngle >= 22.5 && self.mouseAngle < 67.5) // down + right
+                directionHead = 6;
+            if(self.mouseAngle >= 67.5 && self.mouseAngle < 112.5) //down
                 directionHead = 3;
-            if(self.mouseAngle >= 135 || (self.mouseAngle >= -180 && self.mouseAngle < - 135)) //left
+            if(self.mouseAngle >= 112.5 && self.mouseAngle <  157.5) //down + left
+                directionHead = 4;
+            if(self.mouseAngle >= 157.5 || (self.mouseAngle >= -180 && self.mouseAngle < - 157.5)) //left
                 directionHead = 1;
-            if(self.mouseAngle >= -135 && self.mouseAngle < -45)	//up
+            if(self.mouseAngle >= -157.5 && self.mouseAngle < -112.5)	//up + left
+                directionHead = 5;
+            if(self.mouseAngle >= -112.5 && self.mouseAngle < -67.5)	//up
                 directionHead = 0;
+            if(self.mouseAngle >= -67.5 && self.mouseAngle < -22.5)	//up + right
+                directionHead = 7;
+
 
 
             if(self.pressingRight) // right
@@ -203,11 +219,6 @@
                 Img.head.width, Img.head.height/8,
                 x-width/2, y-height/2, width,height
             );
-            /*ctx.drawImage(Img.track,
-                0, 0,
-                Img.track.width, Img.track.height,
-                x-width/2, y-height/2, width,height
-            );*/
 		}
 
 		Player.list[self.id] = self;
@@ -222,7 +233,8 @@
 		self.id = initPack.id;
 		self.x = initPack.x;
 		self.y = initPack.y;
-		
+		self.type = initPack.type;
+
 		self.draw = function(){
 			var width = 64;
 			var height = 64;
@@ -230,8 +242,16 @@
 			var x = self.x - Player.list[selfId].x + WIDTH_CTX/2;
 			var y = self.y - Player.list[selfId].y + HEIGHT_CTX/2;
 
-			ctx.drawImage(Img.bullet,
-				0,0,Img.bullet.width,Img.bullet.height,
+			var img = null;
+			if(self.type == 1) img = Img.bullet;
+            if(self.type == 3) {
+                var width = 32;
+                var height = 32;
+                img = Img.rocket;
+            }
+
+			ctx.drawImage(img,
+				0,0,img.width,img.height,
 				x-width/2,y-height/2,width,height);
 		}
 		
@@ -245,7 +265,7 @@
         self.id = initPack.id;
         self.x = initPack.x;
         self.y = initPack.y;
-        self.directionTrack = initPack.directionTrack;
+        self.direction = initPack.direction;
         self.draw = function(){
             var width = 60;
             var height = 60;
@@ -254,7 +274,7 @@
             var y = self.y - Player.list[selfId].y + HEIGHT_CTX/2;
 
             ctx.drawImage(Img.track,
-                0,Img.track.height/4 * self.directionTrack,
+                0,Img.track.height/4 * self.direction,
 				Img.track.width,Img.track.height/4,
                 x-width/2,y-height/2,width,height);
         }
@@ -263,6 +283,33 @@
         return self;
     }
     Track.list = {};
+
+    var Animation = function(initPack){
+        var self = {};
+        self.id = initPack.id;
+        self.x = initPack.x;
+        self.y = initPack.y;
+        self.direction = initPack.direction;
+        self.frame = 0;
+        self.draw = function(){
+            var width = 60;
+            var height = 60;
+
+            var x = self.x - Player.list[selfId].x + WIDTH_CTX/2;
+            var y = self.y - Player.list[selfId].y + HEIGHT_CTX/2;
+
+            ctx.drawImage(Img.blow,
+                0,Img.blow.height/15,
+                Img.blow.width,Img.blow.height/15,
+                x-width/2,y-height/2,width,height);
+
+            self.frame++;
+        }
+
+        Animation.list[self.id] = self;
+        return self;
+    }
+    Animation.list = {};
 	
 	var selfId = null;
 
@@ -277,11 +324,12 @@
 			new Bullet(data.bullet[i]);
 		}
 
-		for(var i = 0 ; i < data.track.length; i++){
-			new Track(data.track[i]);
+		for(var i = 0 ; i < data.actor.length; i++){
+			if(data.actor[i].type == 'track') new Track(data.actor[i]);
+			if(data.actor[i].type == 'blow') drawBlow(data.actor[i]);
 		}
 
-		if(data.track.length > 0) console.log(data.track);
+		if(data.actor.length > 0) console.log(data.actor);
 	});
 	
 	socket.on('update',function(data){
@@ -331,8 +379,8 @@
 		for(var i = 0 ; i < data.bullet.length; i++){
 			delete Bullet.list[data.bullet[i]];
 		}
-        for(var i = 0 ; i < data.track.length; i++){
-            delete Track.list[data.track[i]];
+        for(var i = 0 ; i < data.actor.length; i++){
+            delete Track.list[data.actor[i]];
         }
 	});
 	
@@ -350,15 +398,32 @@
             Track.list[i].draw();
 	},40);
 	
-	var drawMap = function(){
+	var drawBlow = function(param){
 		var player = Player.list[selfId];
-		var x = WIDTH_CTX/2 - player.x;
+        var width = 60;
+        var height = 60;
+
+        var x = param.x - Player.list[selfId].x + WIDTH_CTX/2;
+        var y = param.y - Player.list[selfId].y + HEIGHT_CTX/2;
+
+        for(var i = 0; i<15; i++){
+            ctx.drawImage(Img.blow,
+                0,Img.blow.height/15 * i,
+                Img.blow.width,Img.blow.height/15,
+                x-width/2,y-height/2,width,height);
+		}
+
+	}
+
+    var drawMap = function(){
+        var player = Player.list[selfId];
+        var x = WIDTH_CTX/2 - player.x;
         var y = HEIGHT_CTX/2 - player.y;
 
-		ctx.drawImage(Img.bg,0,0,Img.bg.width, Img.bg.height, -10, -10, Img.bg.width*20, Img.bg.height*20);
-		ctx.drawImage(Img.map,0,0,Img.map.width, Img.map.height, x,y, Img.map.width*8, Img.map.height*4);
+        ctx.drawImage(Img.bg,0,0,Img.bg.width, Img.bg.height, -10, -10, Img.bg.width*20, Img.bg.height*20);
+        ctx.drawImage(Img.map,0,0,Img.map.width, Img.map.height, x,y, Img.map.width, Img.map.height);
         ctx.drawImage(Img.box,0,0,Img.box.width, Img.box.height, x + 100, y + 100, Img.box.width, Img.box.height);
-	}
+    }
 
 	var drawScore = function(){
 		if(lastScore === Player.list[selfId].score)
@@ -393,7 +458,7 @@
 	}
 	
 	document.onmousedown = function(event){
-		socket.emit('keyPress',{inputId:'attack',state:true});
+		socket.emit('keyPress',{inputId:'attack',state:event.which});
 	}
 	document.onmouseup = function(event){
 		socket.emit('keyPress',{inputId:'attack',state:false});
